@@ -13,24 +13,19 @@
 function Sys.xor 0
     // Your implementation goes here.
     // Get the two arguments
-    push argument 0
-    push argument 1
-    
-    // First part: (x AND (NOT y))
-    push argument 0
-    push argument 1
-    not
-    and
-    
-    // Second part: ((NOT x) AND y)
-    push argument 0
-    not
-    push argument 1
-    and
-    
-    // Combine with OR: (x AND (NOT y)) OR ((NOT x) AND y)
-    or    
-    return
+  // Pop y and x
+  pop temp 0     // y
+  pop temp 1     // x
+  push temp 0
+  push temp 1
+  not
+  and            // !x & y
+  push temp 1
+  push temp 0
+  not
+  and            // x & !y
+  or             // x ^ y = (!x & y) | (x & !y)
+  return
 
 
 
@@ -47,44 +42,34 @@ function Sys.xor 0
 //
 function Sys.shiftLeft 2
     // Your implementation goes here.
-    // Store the value to shift in local 0
-    push argument 0
-    pop local 0
-    
-    // Store the shift count in local 1
-    push argument 1
-    pop local 1
-    
-    // Check if shift count is 0
-    push local 1
+    // arg0: x, arg1: shift count
+    pop temp 0     // y = shift count
+    pop temp 1     // x = value
+    push temp 0
     push constant 0
     eq
-    if-goto RETURN_VALUE
-    
-    // Loop to shift left by doubling the value
-label SHIFT_LOOP
-    // Check if we've done all shifts
-    push local 1
+    if-goto SL_END
+
+label SL_LOOP
+    push temp 0
     push constant 0
     eq
-    if-goto RETURN_VALUE
-    
-    // Double the value (shift left by 1)
-    push local 0
-    push local 0
+    if-goto SL_END
+
+    push temp 1
+    push temp 1
     add
-    pop local 0
-    
-    // Decrement the shift counter
-    push local 1
+    pop temp 1     // x = x + x
+
+    push temp 0
     push constant 1
     sub
-    pop local 1
-    
-    goto SHIFT_LOOP
-    
-label RETURN_VALUE
-    push local 0    
+    pop temp 0     // y = y - 1
+
+    goto SL_LOOP
+
+label SL_END
+    push temp 1    // push result
     return
 
 
@@ -114,61 +99,51 @@ label RETURN_VALUE
 //
 function Sys.computeParity 2
     // Your implementation goes here.
-    // Store the input in local 0
-    push argument 0
-    pop local 0
-    
-    // Initialize parity bit to 0
+    pop temp 0     // inputString
     push constant 0
-    pop local 1
-    
-    // Loop through all 15 bits (ignoring the leftmost bit)
+    pop temp 1     // parityBit = 0
     push constant 0
-    pop temp 0  // Loop counter i
-    
-label PARITY_LOOP
-    // Check if we've checked all 15 bits
-    push temp 0
+    pop temp 2     // i = 0
+
+label CP_LOOP
+    push temp 2
     push constant 15
     eq
-    if-goto RETURN_PARITY
-    
-    // Create bitmask (1 << i)
+    if-goto CP_DONE
+
+    // bitmask = 1 << i
     push constant 1
-    push temp 0
+    push temp 2
     call Sys.shiftLeft 2
-    
-    // Get ith bit (input & bitmask)
-    push local 0
+    pop temp 3     // bitmask
+
+    // bit = inputString & bitmask
+    push temp 0
+    push temp 3
     and
-    
-    // Check if ith bit is set (not equal to 0)
+    pop temp 4     // result
+
+    // if result != 0 then parityBit ^= 1
+    push temp 4
     push constant 0
     eq
-    not
-    if-goto BIT_IS_SET
-    
-    // Bit is not set, continue to next bit
-    goto NEXT_BIT
-    
-label BIT_IS_SET
-    // Toggle the parity bit
-    push local 1
+    if-goto CP_SKIP
+
+    push temp 1
     push constant 1
     call Sys.xor 2
-    pop local 1
-    
-label NEXT_BIT
-    // Increment counter
-    push temp 0
+    pop temp 1
+
+label CP_SKIP
+    // i++
+    push temp 2
     push constant 1
     add
-    pop temp 0
-    
-    goto PARITY_LOOP
-    
-label RETURN_PARITY
-    push local 1    
+    pop temp 2
+    goto CP_LOOP
+
+label CP_DONE
+    push temp 1
     return
 
 
@@ -194,36 +169,42 @@ label RETURN_PARITY
 // result is at the top of the stack.
 //
 function Sys.encode 0
-    // Your implementation goes here.
-    // Clear the most significant bit
-    push constant 0
-    push constant 15 
-    call Sys.shiftLeft 2    // Create mask 1000000000000000
-    not                     // Invert to 0111111111111111
-    push argument 0
-    and                     // Clear the MSB of the input
-    
-    // Compute the parity
-    push argument 0
+    pop temp 0         // input
+    push temp 0
     call Sys.computeParity 1
-    
-    // Check if parity is 1
-    push constant 0
+    pop temp 1         // parity
+
+    push temp 1
+    push constant 1
     eq
-    not
-    if-goto SET_MSB
-    
-    // Parity is 0, just return the value with MSB cleared
-    goto RETURN_RESULT
-    
-label SET_MSB
-    // Set the most significant bit
-    push constant 0
+    if-goto SET_TOP
+
+    // parity == 0, clear top bit
+    push constant 1
     push constant 15
-    call Sys.shiftLeft 2    // Create mask 1000000000000000
-    or                      // Set MSB
-    
-label RETURN_RESULT    
+    call Sys.shiftLeft 2
+    pop temp 2         // bitmask = 1 << 15
+
+    push temp 2
+    not
+    push temp 0
+    and
+    pop temp 4         // 
+    push temp 4
+    return
+
+label SET_TOP
+    // parity == 1, set top bit
+    push constant 1
+    push constant 15
+    call Sys.shiftLeft 2
+    pop temp 3         // bitmask = 1 << 15
+
+    push temp 0
+    push temp 3
+    or
+    pop temp 4         // 
+    push temp 4
     return
 
 
@@ -240,6 +221,7 @@ label RETURN_RESULT
 // rejected.
 //
 function Sys.init 0
+
     call Sys.encode 1
 
 label WHILE
