@@ -1,133 +1,228 @@
 //// COMPUTE THE BITWISE EXCLUSIVE OR.
+// This function takes two arguments and pushes the exclusive
+// OR of its bits onto the stack. This function implements the
+// formula:
+//    x XOR y = (x AND (NOT y)) OR ((NOT x) and y)
+// To call this function, you should:
+//   1. push the two arguments onto the stack; and
+//   2. call this function with `call Sys.xor 2`.
+// Before returning, the function pushes the result onto the
+// stack, so that, from the point of view of the callee, the
+// result is at the top of the stack.
+//
 function Sys.xor 0
-    push argument 0
-    push argument 1
-    not
-    and       // x AND (NOT y)
+    // Your implementation goes here.
+    // Get the two arguments
+  // Pop y and x
+  pop temp 0     // y
+  pop temp 1     // x
+  push temp 0
+  push temp 1
+  not
+  and            // !x & y
+  push temp 1
+  push temp 0
+  not
+  and            // x & !y
+  or             // x ^ y = (!x & y) | (x & !y)
+  return
 
-    push argument 0
-    not
-    push argument 1
-    and       // (NOT x) AND y
 
-    or        // combine both parts
-    return
 
 //// SHIFT A VALUE LEFT BY REPEATED ADDITION.
+// This function takes two arguments and pushes the first argument
+// shifted left by as many position as indicated by the second
+// argument. To call this function, you should:
+//   1. push the two arguments (number to be shifted and number of
+//      shift positions) onto the stack; and
+//   2. call this function with `call Sys.shiftLeft 2`.
+// Before returning, the function pushes the result onto the
+// stack, so that, from the point of view of the callee, the
+// result is at the top of the stack.
+//
 function Sys.shiftLeft 2
-    push argument 0
-    pop local 0
-
-    push argument 1
-    pop local 1
-
-label SHIFT_LOOP
-    push local 1
+    // Your implementation goes here.
+    // arg0: x, arg1: shift count
+    pop temp 0     // y = shift count
+    pop temp 1     // x = value
+    push temp 0
     push constant 0
     eq
-    if-goto DONE
+    if-goto SL_END
 
-    push local 0
-    push local 0
+label SL_LOOP
+    push temp 0
+    push constant 0
+    eq
+    if-goto SL_END
+
+    push temp 1
+    push temp 1
     add
-    pop local 0
+    pop temp 1     // x = x + x
 
-    push local 1
+    push temp 0
     push constant 1
     sub
-    pop local 1
+    pop temp 0     // y = y - 1
 
-    goto SHIFT_LOOP
+    goto SL_LOOP
 
-label DONE
-    push local 0
+label SL_END
+    push temp 1    // push result
     return
+
+
 
 //// COMPUTE THE PARITY OF THE BOTTOM 15 BITS OF AN INTEGER.
-function Sys.computeParity 0
-    push argument 0
-    pop local 0
-
+// This function takes one arguments and pushes the parity of
+// the fifteen right-most bits onto the stack. The possible output
+// values are 1, if the number of 1s in the right-most fifteen
+// bits is odd, or 0, if the number of 1s in the right-most
+// fifteen bits is even. Here is some example output:
+//
+//     INPUT (binary)  | OUT |         NOTES
+//    -----------------+-----+-----------------------
+//    1000000000000000 |  0  | Left-most bit ignored.
+//    0000000000000001 |  1  |
+//    1000000000000001 |  1  | Left-most bit ignored.
+//    0111111111011111 |  0  |
+//    0111111111111111 |  1  |
+//    1111111111111111 |  1  | Left-most bit ignored.
+//
+// To call this function, you should:
+//   1. push the argument onto the stack; and
+//   2. call this function with `call Sys.computeParity 1`.
+// Before returning, the function pushes the result onto the
+// stack, so that, from the point of view of the callee, the
+// result is at the top of the stack.
+//
+function Sys.computeParity 2
+    // Your implementation goes here.
+    pop temp 0     // inputString
     push constant 0
-    pop local 1
-
+    pop temp 1     // parityBit = 0
     push constant 0
-    pop temp 0
+    pop temp 2     // i = 0
 
-label LOOP
-    push temp 0
+label CP_LOOP
+    push temp 2
     push constant 15
     eq
-    if-goto END
+    if-goto CP_DONE
 
+    // bitmask = 1 << i
     push constant 1
-    push temp 0
+    push temp 2
     call Sys.shiftLeft 2
+    pop temp 3     // bitmask
 
-    push local 0
+    // bit = inputString & bitmask
+    push temp 0
+    push temp 3
     and
+    pop temp 4     // result
 
+    // if result != 0 then parityBit ^= 1
+    push temp 4
     push constant 0
     eq
-    not
-    if-goto TOGGLE
+    if-goto CP_SKIP
 
-    goto NEXT
-
-label TOGGLE
-    push local 1
+    push temp 1
     push constant 1
     call Sys.xor 2
-    pop local 1
+    pop temp 1
 
-label NEXT
-    push temp 0
+label CP_SKIP
+    // i++
+    push temp 2
     push constant 1
     add
-    pop temp 0
+    pop temp 2
+    goto CP_LOOP
 
-    goto LOOP
-
-label END
-    push local 1
+label CP_DONE
+    push temp 1
     return
+
 
 //// SET LEFT-MOST BIT TO PARITY BIT.
+// This function takes one 16-bit string and pushes onto the stack
+// the same bit string with the left-most bit set to the parity
+// bit of the 15 right-most bits. Here is some example output:
+//
+//     INPUT (binary)  | OUTPUT (binary)  |         NOTES
+//    -----------------+------------------+-----------------------
+//    1000000000000000 | 0000000000000000 | Left-most bit ignored.
+//    0000000000000001 | 1000000000000001 |
+//    1000000000000001 | 1000000000000001 | Left-most bit ignored.
+//    0111111111011111 | 0111111111011111 |
+//    0111111111111111 | 1111111111111111 |
+//    1111111111111111 | 1111111111111111 | Left-most bit ignored.
+//
+// To call this function, you should:
+//   1. push the the argument onto the stack; and
+//   2. call this function with `call Sys.encode 1`.
+// Before returning, the function pushes the result onto the
+// stack, so that, from the point of view of the callee, the
+// result is at the top of the stack.
+//
 function Sys.encode 0
-    push constant 0
-    push constant 15
-    call Sys.shiftLeft 2
-    not
-    push argument 0
-    and
-    pop local 0
-
-    push argument 0
+    pop temp 0         // input
+    push temp 0
     call Sys.computeParity 1
-    pop local 1
+    pop temp 1         // parity
 
-    push local 1
-    push constant 0
+    push temp 1
+    push constant 1
     eq
-    if-goto RETURN_ZERO
+    if-goto SET_TOP
 
-    push local 0
-    push constant 0
+    // parity == 0, clear top bit
+    push constant 1
     push constant 15
     call Sys.shiftLeft 2
-    or
-    goto END
+    pop temp 2         // bitmask = 1 << 15
 
-label RETURN_ZERO
-    push local 0
-
-label END
+    push temp 2
+    not
+    push temp 0
+    and
+    pop temp 4         // 
+    push temp 4
     return
 
-//// INITIALISE SYSTEM
+label SET_TOP
+    // parity == 1, set top bit
+    push constant 1
+    push constant 15
+    call Sys.shiftLeft 2
+    pop temp 3         // bitmask = 1 << 15
+
+    push temp 0
+    push temp 3
+    or
+    pop temp 4         // 
+    push temp 4
+    return
+
+
+
+// The emulator will start executing from here. You can modify
+// the code below while testing and debugging your code, but
+// please revert your changes before submitting to Gradescope;
+// otherwise, your submission will most likely fail all tests.
+//
+// A better way to test your code is to use the supplied file
+//   Sys.tst
+// with the virtual machine emulator. Please do not submit this
+// file to Gradescope, as this will cause your submission to be
+// rejected.
+//
 function Sys.init 0
-    push constant 31
+
     call Sys.encode 1
 
-label LOOP
-    goto LOOP
+label WHILE
+    goto WHILE
